@@ -26,6 +26,34 @@ echo "--- Installing PHP dependencies ---"
 composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 echo "✓ Dependencies installed"
 
+# Clean and set correct .env values
+echo ""
+echo "--- Configuring .env ---"
+
+ENV_FILE=".env"
+
+# Remove Symfony auto-generated blocks (###> ... ###< sections)
+sed -i '/###>/,/###</d' "$ENV_FILE"
+
+# Remove duplicate blank lines
+sed -i '/^$/N;/^\n$/d' "$ENV_FILE"
+
+# Set correct values (update if exists, append if not)
+set_env() {
+    local KEY=$1
+    local VALUE=$2
+    if grep -q "^${KEY}=" "$ENV_FILE" 2>/dev/null; then
+        sed -i "s|^${KEY}=.*|${KEY}=${VALUE}|" "$ENV_FILE"
+    else
+        echo "${KEY}=${VALUE}" >> "$ENV_FILE"
+    fi
+}
+
+set_env "APP_ENV"   "prod"
+set_env "APP_DEBUG" "0"
+
+echo "✓ .env configured"
+
 # 4. Admin password setup (commented out — password is hardcoded in security.yaml)
 # To enable dynamic password setup, uncomment this section and update security.yaml
 # to use '%env(ADMIN_PASSWORD_HASH)%' instead of a hardcoded hash.
