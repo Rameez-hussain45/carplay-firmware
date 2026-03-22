@@ -74,8 +74,7 @@ class SoftwareVersionCrudController extends AbstractCrudController
     {
         // ── List view columns ─────────────────────────────────────────────────
         yield IdField::new('id', 'ID')
-            ->onlyOnIndex()
-            ->setMaxWidth(60);
+            ->onlyOnIndex();
 
         yield ChoiceField::new('name', 'Product')
             ->setChoices(self::PRODUCT_NAMES)
