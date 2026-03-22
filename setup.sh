@@ -8,7 +8,6 @@ echo ""
 # 1. Check PHP
 if ! command -v php &>/dev/null; then
     echo "ERROR: PHP is not installed."
-    echo "  sudo apt install php php-sqlite3 php-xml php-mbstring php-curl php-zip"
     exit 1
 fi
 PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
@@ -27,63 +26,61 @@ echo "--- Installing PHP dependencies ---"
 composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 echo "✓ Dependencies installed"
 
-# 4. Admin password
-echo ""
-echo "--- Admin password setup ---"
-echo "Choose a password for the admin panel (username is: admin)"
-echo ""
-
-while true; do
-    read -s -p "Enter admin password (min 8 chars): " ADMIN_PASS
-    echo ""
-    read -s -p "Confirm admin password:              " ADMIN_PASS2
-    echo ""
-
-    if [ -z "$ADMIN_PASS" ]; then
-        echo "Password cannot be empty. Try again."; echo ""; continue
-    fi
-    if [ "$ADMIN_PASS" != "$ADMIN_PASS2" ]; then
-        echo "Passwords do not match. Try again."; echo ""; continue
-    fi
-    if [ ${#ADMIN_PASS} -lt 8 ]; then
-        echo "Password must be at least 8 characters. Try again."; echo ""; continue
-    fi
-    break
-done
-
-# Write password to temp file to avoid shell special character issues
-TMPFILE=$(mktemp)
-printf '%s' "$ADMIN_PASS" > "$TMPFILE"
-
-# Hash using Symfony's own hasher
-HASHED=$(php -r "
-require_once __DIR__ . '/vendor/autoload.php';
-use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
-\$h = new NativePasswordHasher(null, null, 13);
-echo \$h->hash(file_get_contents('$TMPFILE'));
-")
-
-rm -f "$TMPFILE"
-
-if [ -z "$HASHED" ]; then
-    echo "ERROR: Could not hash password."
-    exit 1
-fi
-
-# Write hash into .env safely using PHP to avoid sed issues with $ chars
-php -r "
-\$env = file_get_contents('.env');
-\$hash = file_get_contents('$TMPFILE') ?: '$HASHED';
-\$newLine = 'ADMIN_PASSWORD_HASH=' . '$HASHED';
-if (preg_match('/^ADMIN_PASSWORD_HASH=.*/m', \$env)) {
-    \$env = preg_replace('/^ADMIN_PASSWORD_HASH=.*/m', \$newLine, \$env);
-} else {
-    \$env .= PHP_EOL . \$newLine . PHP_EOL;
-}
-file_put_contents('.env', \$env);
-echo 'Password hash written to .env' . PHP_EOL;
-"
-echo "✓ Admin password saved"
+# 4. Admin password setup (commented out — password is hardcoded in security.yaml)
+# To enable dynamic password setup, uncomment this section and update security.yaml
+# to use '%env(ADMIN_PASSWORD_HASH)%' instead of a hardcoded hash.
+#
+# echo ""
+# echo "--- Admin password setup ---"
+# echo "Choose a password for the admin panel (username is: admin)"
+# echo ""
+#
+# while true; do
+#     read -s -p "Enter admin password (min 8 chars): " ADMIN_PASS
+#     echo ""
+#     read -s -p "Confirm admin password:              " ADMIN_PASS2
+#     echo ""
+#
+#     if [ -z "$ADMIN_PASS" ]; then
+#         echo "Password cannot be empty. Try again."; echo ""; continue
+#     fi
+#     if [ "$ADMIN_PASS" != "$ADMIN_PASS2" ]; then
+#         echo "Passwords do not match. Try again."; echo ""; continue
+#     fi
+#     if [ ${#ADMIN_PASS} -lt 8 ]; then
+#         echo "Password must be at least 8 characters. Try again."; echo ""; continue
+#     fi
+#     break
+# done
+#
+# TMPFILE=$(mktemp)
+# printf '%s' "$ADMIN_PASS" > "$TMPFILE"
+#
+# HASHED=$(php -r "
+# require_once __DIR__ . '/vendor/autoload.php';
+# use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
+# \$h = new NativePasswordHasher(null, null, 13);
+# echo \$h->hash(file_get_contents('$TMPFILE'));
+# ")
+#
+# rm -f "$TMPFILE"
+#
+# if [ -z "$HASHED" ]; then
+#     echo "ERROR: Could not hash password."
+#     exit 1
+# fi
+#
+# php -r "
+# \$env = file_get_contents('.env');
+# \$newLine = 'ADMIN_PASSWORD_HASH=' . '$HASHED';
+# if (preg_match('/^ADMIN_PASSWORD_HASH=.*/m', \$env)) {
+#     \$env = preg_replace('/^ADMIN_PASSWORD_HASH=.*/m', \$newLine, \$env);
+# } else {
+#     \$env .= PHP_EOL . \$newLine . PHP_EOL;
+# }
+# file_put_contents('.env', \$env);
+# "
+# echo "✓ Admin password saved"
 
 # 5. Create var directory
 mkdir -p var
@@ -175,5 +172,5 @@ echo "Then open:"
 echo "  Customer page: http://localhost:8000/carplay/software-download"
 echo "  Admin panel:   http://localhost:8000/admin"
 echo "    Username: admin"
-echo "    Password: (what you just set)"
+echo "    Password: Admin1234"
 echo ""
