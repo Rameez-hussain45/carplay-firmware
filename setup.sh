@@ -28,60 +28,60 @@ composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 echo "✓ Dependencies installed"
 
 # 4. Admin password — hash with plain PHP, NO symfony console needed
-# echo ""
-# echo "--- Admin password setup ---"
-# echo "Choose a password for the admin panel (username is: admin)"
-# echo ""
+echo ""
+echo "--- Admin password setup ---"
+echo "Choose a password for the admin panel (username is: admin)"
+echo ""
 
-# while true; do
-#     read -s -p "Enter admin password (min 8 chars): " ADMIN_PASS
-#     echo ""
-#     read -s -p "Confirm admin password:              " ADMIN_PASS2
-#     echo ""
+while true; do
+    read -s -p "Enter admin password (min 8 chars): " ADMIN_PASS
+    echo ""
+    read -s -p "Confirm admin password:              " ADMIN_PASS2
+    echo ""
 
-#     if [ -z "$ADMIN_PASS" ]; then
-#         echo "Password cannot be empty. Try again."
-#         continue
-#     fi
-#     if [ "$ADMIN_PASS" != "$ADMIN_PASS2" ]; then
-#         echo "Passwords do not match. Try again."
-#         echo ""
-#         continue
-#     fi
-#     if [ ${#ADMIN_PASS} -lt 8 ]; then
-#         echo "Password must be at least 8 characters. Try again."
-#         echo ""
-#         continue
-#     fi
-#     break
-# done
+    if [ -z "$ADMIN_PASS" ]; then
+        echo "Password cannot be empty. Try again."
+        continue
+    fi
+    if [ "$ADMIN_PASS" != "$ADMIN_PASS2" ]; then
+        echo "Passwords do not match. Try again."
+        echo ""
+        continue
+    fi
+    if [ ${#ADMIN_PASS} -lt 8 ]; then
+        echo "Password must be at least 8 characters. Try again."
+        echo ""
+        continue
+    fi
+    break
+done
 
 # Hash using PHP directly — no symfony console, no interactive prompt
 # Write password to temp file to avoid shell escaping issues
-# TMPFILE=$(mktemp)
-# printf '%s' "$ADMIN_PASS" > "$TMPFILE"
+TMPFILE=$(mktemp)
+printf '%s' "$ADMIN_PASS" > "$TMPFILE"
 
 # Hash using Symfony's own hasher — guaranteed to match what Symfony verifies
-# HASHED=$(php -r "
-# require_once __DIR__ . '/vendor/autoload.php';
-# use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
-# \$h = new NativePasswordHasher(null, null, 13);
-# echo \$h->hash(file_get_contents('$TMPFILE'));
-# ")
+HASHED=$(php -r "
+require_once __DIR__ . '/vendor/autoload.php';
+use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
+\$h = new NativePasswordHasher(null, null, 13);
+echo \$h->hash(file_get_contents('$TMPFILE'));
+")
 
-# rm -f \"\$TMPFILE\"
-# if [ -z "$HASHED" ]; then
-#     echo "ERROR: Could not hash password."
-#     exit 1
-# fi
+rm -f \"\$TMPFILE\"
+if [ -z "$HASHED" ]; then
+    echo "ERROR: Could not hash password."
+    exit 1
+fi
 
-# # Write into .env — replace placeholder or append
-# if grep -q '^ADMIN_PASSWORD_HASH=' .env; then
-#     sed -i "s|^ADMIN_PASSWORD_HASH=.*|ADMIN_PASSWORD_HASH=$HASHED|" .env
-# else
-#     echo "ADMIN_PASSWORD_HASH=$HASHED" >> .env
-# fi
-# echo "✓ Admin password saved"
+# Write into .env — replace placeholder or append
+if grep -q '^ADMIN_PASSWORD_HASH=' .env; then
+    sed -i "s|^ADMIN_PASSWORD_HASH=.*|ADMIN_PASSWORD_HASH=$HASHED|" .env
+else
+    echo "ADMIN_PASSWORD_HASH=$HASHED" >> .env
+fi
+echo "✓ Admin password saved"
 
 # 5. Create var directory
 mkdir -p var
