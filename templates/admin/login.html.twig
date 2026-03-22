@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login — BimmerTech Firmware</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 48px 40px 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 60px rgba(0,0,0,.5);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -.3px;
+        }
+        .logo p {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: #b91c1c;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .field { margin-bottom: 18px; }
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 11px 14px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+            color: #0f172a;
+        }
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+        }
+
+        .btn {
+            width: 100%;
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: opacity .15s;
+        }
+        .btn:hover { opacity: .9; }
+
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 22px;
+            font-size: 13px;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .back:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="logo">
+        <h1>BimmerTech</h1>
+        <p>Firmware Admin Panel</p>
+    </div>
+
+    {% if error %}
+        <div class="error-box">
+            {{ error.messageKey | trans(error.messageData, 'security') }}
+        </div>
+    {% endif %}
+
+    <form method="post" action="{{ path('admin_login') }}">
+        <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="_username"
+                   value="{{ last_username }}"
+                   autocomplete="username" required autofocus>
+        </div>
+
+        <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="_password"
+                   autocomplete="current-password" required>
+        </div>
+
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+        <button type="submit" class="btn">Sign In</button>
+    </form>
+
+    <a class="back" href="{{ path('software_download') }}">← Back to customer page</a>
+</div>
+
+</body>
+</html>

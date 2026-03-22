@@ -1,0 +1,7 @@
+# Create .gitignore
+cat > .gitignore << 'EOF'
+/vendor/
+/var/
+/.env.local
+*.db
+EOF
