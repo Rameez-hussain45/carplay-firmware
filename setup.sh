@@ -21,13 +21,13 @@ if ! command -v composer &>/dev/null; then
 fi
 echo "✓ Composer found"
 
-# 3. Install PHP dependencies (--no-scripts skips cache:clear which needs DB)
+# 3. Install PHP dependencies
 echo ""
 echo "--- Installing PHP dependencies ---"
 composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 echo "✓ Dependencies installed"
 
-# 4. Admin password — hash with plain PHP, NO symfony console needed
+# 4. Admin password
 echo ""
 echo "--- Admin password setup ---"
 echo "Choose a password for the admin panel (username is: admin)"
@@ -40,28 +40,22 @@ while true; do
     echo ""
 
     if [ -z "$ADMIN_PASS" ]; then
-        echo "Password cannot be empty. Try again."
-        continue
+        echo "Password cannot be empty. Try again."; echo ""; continue
     fi
     if [ "$ADMIN_PASS" != "$ADMIN_PASS2" ]; then
-        echo "Passwords do not match. Try again."
-        echo ""
-        continue
+        echo "Passwords do not match. Try again."; echo ""; continue
     fi
     if [ ${#ADMIN_PASS} -lt 8 ]; then
-        echo "Password must be at least 8 characters. Try again."
-        echo ""
-        continue
+        echo "Password must be at least 8 characters. Try again."; echo ""; continue
     fi
     break
 done
 
-# Hash using PHP directly — no symfony console, no interactive prompt
-# Write password to temp file to avoid shell escaping issues
+# Write password to temp file to avoid shell special character issues
 TMPFILE=$(mktemp)
 printf '%s' "$ADMIN_PASS" > "$TMPFILE"
 
-# Hash using Symfony's own hasher — guaranteed to match what Symfony verifies
+# Hash using Symfony's own hasher
 HASHED=$(php -r "
 require_once __DIR__ . '/vendor/autoload.php';
 use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
@@ -69,25 +63,33 @@ use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
 echo \$h->hash(file_get_contents('$TMPFILE'));
 ")
 
-rm -f \"\$TMPFILE\"
+rm -f "$TMPFILE"
+
 if [ -z "$HASHED" ]; then
     echo "ERROR: Could not hash password."
     exit 1
 fi
 
-# Write into .env — replace placeholder or append
-if grep -q '^ADMIN_PASSWORD_HASH=' .env; then
-    sed -i "s|^ADMIN_PASSWORD_HASH=.*|ADMIN_PASSWORD_HASH=$HASHED|" .env
-else
-    echo "ADMIN_PASSWORD_HASH=$HASHED" >> .env
-fi
+# Write hash into .env safely using PHP to avoid sed issues with $ chars
+php -r "
+\$env = file_get_contents('.env');
+\$hash = file_get_contents('$TMPFILE') ?: '$HASHED';
+\$newLine = 'ADMIN_PASSWORD_HASH=' . '$HASHED';
+if (preg_match('/^ADMIN_PASSWORD_HASH=.*/m', \$env)) {
+    \$env = preg_replace('/^ADMIN_PASSWORD_HASH=.*/m', \$newLine, \$env);
+} else {
+    \$env .= PHP_EOL . \$newLine . PHP_EOL;
+}
+file_put_contents('.env', \$env);
+echo 'Password hash written to .env' . PHP_EOL;
+"
 echo "✓ Admin password saved"
 
 # 5. Create var directory
 mkdir -p var
 chmod 775 var
 
-# 6. Create database table directly with PHP PDO (no migrations command needed)
+# 6. Create database table with PHP PDO
 echo ""
 echo "--- Setting up database ---"
 php -r "
@@ -108,19 +110,21 @@ echo 'Database ready' . PHP_EOL;
 "
 echo "✓ Database created at var/data.db"
 
-# 7. Also run doctrine migrations so Symfony knows migration was applied
+# Mark migration as done so Doctrine does not complain
 php bin/console doctrine:migrations:migrate --no-interaction 2>/dev/null || true
 
-# 8. Load seed data
+# 7. Load seed data
 echo ""
 echo "--- Loading firmware data ---"
 
 EXISTING=$(php -r "
-\$db = new PDO('sqlite:' . __DIR__ . '/var/data.db');
-echo \$db->query('SELECT COUNT(*) FROM software_version')->fetchColumn();
+try {
+    \$db = new PDO('sqlite:' . __DIR__ . '/var/data.db');
+    echo \$db->query('SELECT COUNT(*) FROM software_version')->fetchColumn();
+} catch(Exception \$e) { echo 0; }
 " 2>/dev/null || echo "0")
 
-if [ "$EXISTING" -gt "0" ] 2>/dev/null; then
+if [ "${EXISTING:-0}" -gt "0" ] 2>/dev/null; then
     echo "✓ Database already has $EXISTING entries — skipping seed"
 else
     if command -v sqlite3 &>/dev/null; then
@@ -145,11 +149,18 @@ else
     fi
 fi
 
-# 9. Clear cache
+# 8. Install bundle assets (fixes EasyAdmin CSS/JS in admin panel)
+echo ""
+echo "--- Installing assets ---"
+php bin/console assets:install public --no-interaction
+echo "✓ Assets installed"
+
+# 9. Clear and warm cache
 echo ""
 echo "--- Clearing cache ---"
 rm -rf var/cache/*
 php bin/console cache:clear --no-debug --no-interaction
+php bin/console cache:warmup --no-debug --no-interaction
 echo "✓ Cache cleared"
 
 echo ""
